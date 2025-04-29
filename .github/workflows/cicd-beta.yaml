@@ -1,0 +1,13 @@
+name: CI/CD Pipeline for Beta
+
+on:
+  workflow_dispatch:
+
+jobs:
+  CICD-Beta:
+    uses: ./.github/workflows/base-cicd.yaml
+    with:
+      KUSTOMIZE_OVERLAY: ./3.manifest/kustomize/overlay/beta
+      NAMESPACE: beta
+      WORKSPACE: beta
+    secrets: inherit
