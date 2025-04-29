@@ -1,0 +1,18 @@
+name: CI/CD Pipeline for Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '2.nginx/**'
+      - '3.manifest/kustomize/**.yaml'
+
+jobs:
+  CICD-Production:
+    uses: ./.github/workflows/base-cicd.yaml
+    with:
+      KUSTOMIZE_OVERLAY: ./3.manifest/kustomize/overlay/production
+      NAMESPACE: production
+      WORKSPACE: production
+    secrets: inherit

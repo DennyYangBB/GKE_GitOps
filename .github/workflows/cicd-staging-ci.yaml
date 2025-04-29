@@ -1,0 +1,19 @@
+name: CI Pipeline for Staging
+
+on:
+  pull_request:
+    branches:
+      - staging
+      - staging-*
+    paths:
+      - '2.nginx/**'
+      - '3.manifest/kustomize/**.yaml'
+
+jobs:
+  CI-Staging:
+    uses: ./.github/workflows/base-ci.yaml
+    with:
+      KUSTOMIZE_OVERLAY: ./3.manifest/kustomize/overlay/staging
+      NAMESPACE: staging
+      WORKSPACE: staging
+    secrets: inherit

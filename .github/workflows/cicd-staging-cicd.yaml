@@ -1,0 +1,19 @@
+name: CI/CD Pipeline for Staging
+
+on:
+  push:
+    branches:
+      - staging
+      - staging-*
+    paths:
+      - '2.nginx/**'
+      - '3.manifest/kustomize/**.yaml'
+
+jobs:
+  CICD-Staging:
+    uses: ./.github/workflows/base-cicd.yaml
+    with:
+      KUSTOMIZE_OVERLAY: ./3.manifest/kustomize/overlay/staging
+      NAMESPACE: staging
+      WORKSPACE: staging
+    secrets: inherit

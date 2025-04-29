@@ -1,0 +1,93 @@
+name: CI Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      KUSTOMIZE_OVERLAY:
+        required: true
+        type: string
+      NAMESPACE:
+        required: true
+        type: string
+      WORKSPACE:
+        required: true
+        type: string
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: ${{ vars.PROJECT_ID }}
+      TF_VAR_project_id: ${{ vars.PROJECT_ID }}
+      REGISTRY: asia-east1-docker.pkg.dev
+      REPOSITORY_NAME: demo-registry
+      IMAGE_NAME: nginx-sre
+      IMAGE_TAG: latest
+      TF_DIR: ./1.terraform/gcp
+      DOCKER_FILE: ./2.nginx
+      KUSTOMIZE_OVERLAY: ${{ inputs.KUSTOMIZE_OVERLAY }}
+      NAMESPACE: ${{ inputs.NAMESPACE }}
+      WORKSPACE: ${{ inputs.WORKSPACE }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@4.2.2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Google Cloud Authentication
+        uses: google-github-actions/auth@v2.1.9
+        with:
+          credentials_json: '${{ secrets.REPO_CREDENTIALS }}'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+
+      - name: Initial Google Cloud Authentication Environment
+        run: |
+          echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+          curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+          sudo apt update
+          sudo apt-get install -y google-cloud-sdk-gke-gcloud-auth-plugin
+          echo "##vso[task.setvariable variable=USE_GKE_GCLOUD_AUTH_PLUGIN]True"
+          gcloud container clusters get-credentials demo-gke --zone asia-east1-b --project $PROJECT_ID
+          gcloud auth configure-docker asia-east1-docker.pkg.dev
+
+      - name: Switch Workspace
+        run: |
+          terraform workspace select $WORKSPACE | terraform workspace new $WORKSPACE
+          mkdir -p /tmp/sre
+
+      - name: Terraform import - 01_gke_network
+        working-directory: 1.terraform/gcp/steps/01_gke_network
+        run: |
+          terraform init
+          echo "VPC_NAME=$(terraform output --raw vpc_name)" >> $GITHUB_ENV
+          echo "SUBNET_NAME=$(terraform output --raw subnet_name)" >> $GITHUB_ENV
+          echo "PRIMARY_CIDR_RANGE=$(terraform output --raw primary_cidr_range )" >> $GITHUB_ENV
+          echo "PODS_CIDR_RANGE=$(terraform output --raw pods_cidr_range )" >> $GITHUB_ENV
+          echo "SERVICES_CIDR_RANGE=$(terraform output --raw services_cidr_range )" >> $GITHUB_ENV
+
+      - name: Terraform import - 02_registry
+        working-directory: 1.terraform/gcp/steps/02_registry
+        run: |
+          terraform init
+          echo "REPO_URL=$(terraform output --raw repository_url)" >> $GITHUB_ENV
+
+      - name: Terraform import - 03_gke
+        working-directory: 1.terraform/gcp/steps/03_gke
+        run: |
+          terraform init
+          echo "GKE_NAME=$(terraform output --raw kubernetes_cluster_name)" >> $GITHUB_ENV
+
+      - name: Terraform import - 04_cloud_armor
+        working-directory: 1.terraform/gcp/steps/04_cloud_armor
+        run: |
+          terraform init
+          echo "CLOUD_ARMOR_NAME=$(terraform output --raw cloud_armor_name )" >> $GITHUB_ENV
+
+      - name: Build Docker image & Push image to Google Registry
+        working-directory: ${{ env.DOCKER_FILE }}
+        run: |
+          docker build -t $REPO_URL/$IMAGE_NAME:$IMAGE_TAG .
