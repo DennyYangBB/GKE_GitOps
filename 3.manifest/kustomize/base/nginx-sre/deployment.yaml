@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-sre
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-sre
+  template:
+    metadata:
+      labels:
+        app: nginx-sre
+    spec:
+      containers:
+        - name: nginx-sre
+          image: asia-east1-docker.pkg.dev/denny-457814/demo-registry/nginx-sre:latest
+          volumeMounts:
+            - name: sre-text
+              mountPath: /usr/share/nginx/html/sre.txt
+              subPath: sre.txt
+      volumes:
+        - name: sre-text
+          configMap:
+            name: nginx-sre-text

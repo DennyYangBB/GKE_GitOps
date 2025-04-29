@@ -1,0 +1,16 @@
+namespace: alpha
+labels:
+  - includeSelectors: false
+    includeTemplates: true
+    pairs:
+      app.kubernetes.io/environment: alpha
+
+resources:
+  - ./namespace.yaml
+  - ./config.yaml # generate by deploy.sh
+  #  - ./resource-quota.yaml # You can add ResourceQuota here
+  - ../../base/nginx-sre/
+
+patches:
+  - target: { group: apps, version: v1, kind: Deployment, name: nginx-sre }
+    path: ./patch-image.yaml
