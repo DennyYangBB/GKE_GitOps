@@ -1,0 +1,8 @@
+variable "region" {}
+variable "vpc_name" {}
+variable "subnet_name" {}
+variable "primary_ip_cidr" {}
+variable "subnet_pods_name" {}
+variable "pods_ip_cidr" {}
+variable "subnet_services_name" {}
+variable "services_ip_cidr" {}
