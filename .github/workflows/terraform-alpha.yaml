@@ -1,0 +1,17 @@
+name: Terraform GitOps for Alpha
+
+on:
+  push:
+    branches:
+      - alpha
+      - alpha-*
+    paths:
+      - '1.terraform/gcp/**.tf'
+      - '1.terraform/gcp/**.tfvars'
+
+jobs:
+  Terraform-Alpha:
+    uses: ./.github/workflows/base-terraform.yaml
+    with:
+      WORKSPACE: alpha
+    secrets: inherit

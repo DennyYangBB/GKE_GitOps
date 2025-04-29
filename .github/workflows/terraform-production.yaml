@@ -1,0 +1,16 @@
+name: Terraform GitOps for Production
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '1.terraform/gcp/**.tf'
+      - '1.terraform/gcp/**.tfvars'
+
+jobs:
+  Terraform-Production:
+    uses: ./.github/workflows/base-terraform.yaml
+    with:
+      WORKSPACE: production
+    secrets: inherit

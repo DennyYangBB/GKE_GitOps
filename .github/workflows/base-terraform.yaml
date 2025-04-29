@@ -1,0 +1,66 @@
+name: Terraform GitOps
+
+on:
+  workflow_call:
+    inputs:
+      WORKSPACE:
+        required: true
+        type: string
+
+jobs:
+  Terraform:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: ${{ vars.PROJECT_ID }}
+      WORKSPACE: ${{ inputs.WORKSPACE }}
+      TF_VAR_project_id: ${{ vars.PROJECT_ID }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@4.2.2
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3.1.2
+
+      - name: Set up Google Cloud Authentication
+        uses: google-github-actions/auth@v2.1.9
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Switch Workspace
+        run: |
+          terraform workspace select $WORKSPACE | terraform workspace new $WORKSPACE
+
+      - name: Install dependencies (optional)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Terraform - 01_gke_network
+        working-directory: ./1.terraform/gcp/steps/01_gke_network
+        run: |
+          terraform init
+          terraform plan -var-file=../../envs/01_gke_network/$WORKSPACE.tfvars
+          terraform apply -var-file=../../envs/01_gke_network/$WORKSPACE.tfvars -auto-approve
+
+      - name: Terraform - 02_registry
+        working-directory: ./1.terraform/gcp/steps/02_registry
+        run: |
+          terraform init
+          terraform plan -var-file=../../envs/02_registry/$WORKSPACE.tfvars
+          terraform apply -var-file=../../envs/02_registry/$WORKSPACE.tfvars -auto-approve
+
+      - name: Terraform - 03_gke
+        working-directory: ./1.terraform/gcp/steps/03_gke
+        run: |
+          terraform init
+          terraform plan -var-file=../../envs/03_gke/$WORKSPACE.tfvars
+          terraform apply -var-file=../../envs/03_gke/$WORKSPACE.tfvars -auto-approve
+
+      - name: Terraform - 04_cloud_armor
+        working-directory: ./1.terraform/gcp/steps/04_cloud_armor
+        run: |
+          export TF_VAR_instance_group=$(gcloud compute instance-groups list | sed -n '2 p' | awk '{print $1}')
+          terraform init
+          terraform plan -var-file=../../envs/04_cloud_armor/$WORKSPACE.tfvars
+          terraform apply -var-file=../../envs/04_cloud_armor/$WORKSPACE.tfvars -auto-approve
