@@ -1,0 +1,12 @@
+.idea/
+.DS_Store
+
+# Terraform
+*.tfstate
+*.tfstate.*
+/.terraform/
+#*.tfvars  # Uncomment in real world
+*.terraform.lock.hcl
+*.out
+
+output
