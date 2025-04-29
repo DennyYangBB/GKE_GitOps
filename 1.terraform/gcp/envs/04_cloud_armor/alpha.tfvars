@@ -1,0 +1,5 @@
+region      = "asia-east1"
+zone        = "asia-east1-b"
+env         = "alpha"
+policy_name = "only-one-ip-allowed"
+allow_ip    = "10.10.10.10/32"
