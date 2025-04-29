@@ -1,0 +1,108 @@
+= Applying GitOps Practices to Manifests and Terraform in GKE
+Denny Yang <https://github.com/DennyYangBB[@DennyYangBB]>;
+:toc: left
+:toclevels: 3
+
+== 1. Why GitOps
+
+GitOps brings consistency, traceability, and automation to infrastructure and application deployments.
+By treating everything as code and automating changes via pull requests, it improves reliability and operational efficiency.
+
+== 2. Prepare GCP Environment (Required)
+
+GitHub Actions require access to GCP resources for Terraform and deployment automation.
+Necessary steps include (link:docs/gcp.adoc[Detail]):
+
+* Create a GCP Project.
+* Create a bucket.
+* Enable required APIs (e.g., Compute Engine API, Kubernetes Engine API, Artifact Registry API).
+* Create Service Account with necessary permissions and generate a JSON key for GitHub Actions.
+* Store the key securely in GitHub Secrets.
+
+== 3. Prepare Terraform Environment (Optional)
+
+Although Terraform can be installed locally, in this project GitHub Actions will run Terraform remotely.
+However, to troubleshoot or test locally, you can:
+
+* Install Terraform CLI.
+* Authenticate to GCP via `gcloud auth application-default login`.
+
+[NOTE]
+====
+You can refer to the actual implementation in the GitHub Actions workflows.
+====
+
+== 4. Terraform GitOps
+
+. Why Terraform GitOps
+* Applying GitOps practices to Terraform provides infrastructure as code with full audit trails, controlled deployments, and the ability to review changes before applying them.
+. Steps Explanation: Each module is separated into different stages and commits to minimize risk and facilitate review:
+* `01_gke_network`: Set up VPC, subnets, and related networking.
+* `02_registry`: Create Artifact Registry for container images.
+* `03_gke`: Provision GKE (Google Kubernetes Engine) cluster.
+* `04_cloud_armor`: Set up Cloud Armor security policies.
+. Environment Overview
+* `alpha`: Automatically deploys on each commit to test Terraform changes early and catch misconfigurations.
+* `production`: Deploys during merge requests to decouple from application CI/CD and ensure review before apply.
+
+[NOTE]
+====
+In real-world scenarios:
+
+. Lightweight promotion architectures.
+. Strict review and approval mechanisms.
+====
+
+== 5. Kustomize Manifest GitOps
+
+. Why Kustomize
+* Kustomize allows declarative management of Kubernetes manifests without template engines, supporting clean separation of environment-specific configurations.
+. Why GitOps
+* Storing manifests in Git ensures that cluster state is auditable and reproducible, with pull request workflows for deployments.
+. Environment Overview
+* `alpha`: High commit frequency; manual deployments help reduce unnecessary noise.
+* `beta`: Also uses manual deployments due to ongoing active development.
+* `staging`: CI runs on merge requests; deployment triggered on merge.
+* `production`: CI/CD is triggered only upon merging to main.
+
+== 6. Furthermore: How to Improve
+
+Possible improvements include:
+
+* Automated security scanning is integrated using https://aquasecurity.github.io/tfsec/latest/[tfsec], https://github.com/open-policy-agent/conftest[conftest].
+* Policy as Code is adopted via https://www.checkov.io/[checkov].
+* Set up GitOps monitoring and alerting.
+* Implement drift detection for infrastructure.
+* Suggestion in real world:
+1. Lightweight promotion architectures should be designed to ensure scalability and flexibility.
+2. Strict review and approval mechanisms should be established to ensure reliability and avoid errors.
+
+== 7. Related Work
+
+If you are interested in Kubernetes observability, I also wrote an article about building observability with Istio.
+This demonstrates how to integrate telemetry, tracing, and monitoring into Kubernetes environments.
+
+* https://github.com/DennyYangBB/istio-observability[istio-observability]
+
+== 8. References
+
+[horizontal]
+IaC::
+https://developer.hashicorp.com/terraform[Terraform]
+
+CICD::
+https://github.com/features/actions[GitHub Actions]
+https://about.gitlab.com/topics/gitops/[Gitlab What is GitOps?]
+
+GCP::
+https://learn.hashicorp.com/collections/terraform/gcp-get-started[Get Started - Google Cloud],
+https://cloud.google.com/kubernetes-engine[GKE],
+https://cloud.google.com/cli?hl=zh_tw[gcloud CLI]
+
+Manifest::
+https://github.com/kubernetes-sigs/kustomize[kustomize]
+
+Scan::
+https://www.checkov.io/[checkov],
+https://aquasecurity.github.io/tfsec/latest/[tfsec],
+https://github.com/open-policy-agent/conftest[conftest]

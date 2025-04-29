@@ -1,0 +1,69 @@
+== GCP environment
+
+Add GitHub vars.PROJECT_ID <= <PROJECT ID>
+
+.Export the variables
+[source,bash]
+----
+export project_id=<PROJECT ID>
+export project_id=denny-457814
+export BUCKET=demo-sre-bucket-2025
+export ACCOUNT_TF=sre-tf
+export ACCOUNT_CICD=sre-cicd
+----
+
+=== Create bucket
+
+.Create bucket - for Terraform's backend
+[source,bash]
+----
+gcloud storage buckets create gs://$bucket --location=ASIA
+----
+
+=== Create Terraform GitOps account
+
+.Create service account and apply iam policies
+[source,bash]
+----
+gcloud iam service-accounts create $ACCOUNT_TF --display-name="Terraform GitOps"
+gcloud storage buckets add-iam-policy-binding gs://$BUCKET --member="serviceAccount:$ACCOUNT_TF@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/storage.objectAdmin"
+gcloud projects add-iam-policy-binding $TF_VAR_project_id --member="serviceAccount:$ACCOUNT_TF@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/compute.networkAdmin"
+gcloud projects add-iam-policy-binding $TF_VAR_project_id --member="serviceAccount:$ACCOUNT_TF@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/compute.securityAdmin"
+gcloud projects add-iam-policy-binding $TF_VAR_project_id --member="serviceAccount:$ACCOUNT_TF@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/container.admin"
+gcloud projects add-iam-policy-binding $TF_VAR_project_id --member="serviceAccount:$ACCOUNT_TF@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/iam.serviceAccountAdmin"
+gcloud projects add-iam-policy-binding $TF_VAR_project_id --member="serviceAccount:$ACCOUNT_TF@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/iam.serviceAccountUser"
+gcloud projects add-iam-policy-binding $TF_VAR_project_id --member="serviceAccount:$ACCOUNT_TF@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/artifactregistry.admin"
+----
+
+.Add GitHub secrets.GCP_CREDENTIALS
+[source,bash]
+----
+gcloud iam service-accounts keys create GCP_CREDENTIALS.json --iam-account=$ACCOUNT_TF@$TF_VAR_project_id.iam.gserviceaccount.com
+# rm GCP_CREDENTIALS.json after setup
+----
+
+=== Create CICD account
+
+.For pushisng images registy in Kubernetes environment
+[source,bash]
+----
+gcloud iam service-accounts create $ACCOUNT_CICD --display-name="Terraform GitOps"
+gcloud storage buckets add-iam-policy-binding gs://$BUCKET --member="serviceAccount:$ACCOUNT_CICD@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/storage.objectAdmin"
+gcloud projects add-iam-policy-binding $TF_VAR_project_id --member="serviceAccount:$ACCOUNT_CICD@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/container.admin"
+gcloud projects add-iam-policy-binding $TF_VAR_project_id --member="serviceAccount:$ACCOUNT_CICD@$TF_VAR_project_id.iam.gserviceaccount.com" --role="roles/artifactregistry.admin"
+----
+
+.Add GitHub secrets.REPO_CREDENTIALS
+[source,bash]
+----
+gcloud iam service-accounts keys create REPO_CREDENTIALS.json --iam-account=$ACCOUNT_CICD@$TF_VAR_project_id.iam.gserviceaccount.com
+# rm REPO_CREDENTIALS.json after setup
+----
+
+[NOTE]
+====
+* Add Secret here: https://github.com/DennyYangBB/GKE_GitOps/settings/secrets/actions
+* Add Variable here: https://github.com/DennyYangBB/GKE_GitOps/settings/variables/actions
+
+Your GitHub account instead of mine.
+====
